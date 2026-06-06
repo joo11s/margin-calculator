@@ -83,6 +83,14 @@ header {
   border: 1px solid var(--border);
 }
 .btn-ghost:hover { background: var(--bg); }
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid #fca5a5;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.btn-danger:hover { background: var(--red-bg); }
 
 /* ── Layout ── */
 main {
@@ -353,6 +361,23 @@ table.ctable {
   padding: 4px 0 8px;
 }
 
+/* Ship note */
+.ship-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text2);
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* Add platform footer */
+.add-platform-bar {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   header { padding: 12px 14px; }
@@ -454,16 +479,21 @@ table.ctable {
       <h2><span class="section-num">2</span> 배송비 설정</h2>
     </div>
     <div class="card-body">
-      <div class="two-col">
+      <div class="input-grid">
         <div class="field">
           <label>무료배송 기준금액 (원)</label>
           <input type="number" id="free-min" value="30000" min="0" oninput="calc()">
         </div>
         <div class="field">
-          <label>배송비 단가 (원)</label>
-          <input type="number" id="ship-cost" value="3000" min="0" oninput="calc()">
+          <label>판매자 부담 배송비 (원)</label>
+          <input type="number" id="ship-seller" value="3000" min="0" oninput="calc()">
+        </div>
+        <div class="field">
+          <label>소비자 부담 배송비 (원)</label>
+          <input type="number" id="ship-buyer" value="0" min="0" oninput="calc()">
         </div>
       </div>
+      <p class="ship-note">※ 무료배송 기준 이상이면 판매자 부담 0원, 미달이면 판매자 부담 배송비 적용 (소비자 부담 배송비는 마진 계산 제외)</p>
     </div>
   </div>
 
@@ -474,35 +504,33 @@ table.ctable {
       <span class="badge">마진율: 🔴 &lt;10% &nbsp;🟡 10~20% &nbsp;🟢 &gt;20%</span>
     </div>
     <div class="table-wrap">
-      <table class="ctable">
+      <table class="ctable" id="margin-table">
         <thead>
-          <tr>
+          <tr id="platform-header">
             <th>항목</th>
             <th>
               <div class="ph">스마트스토어</div>
-              <div class="ph-fee">수수료 5.63%</div>
+              <div class="ph-fee">수수료 <input type="number" id="fee-ss" value="5.63" min="0" max="100" step="0.01" oninput="calc()">%</div>
             </th>
             <th>
               <div class="ph">쿠팡</div>
-              <div class="ph-fee">수수료 10.6%</div>
+              <div class="ph-fee">수수료 <input type="number" id="fee-cp" value="10.6" min="0" max="100" step="0.01" oninput="calc()">%</div>
             </th>
             <th>
               <div class="ph">카페24</div>
-              <div class="ph-fee">수수료 3.5%</div>
+              <div class="ph-fee">수수료 <input type="number" id="fee-c24" value="3.5" min="0" max="100" step="0.01" oninput="calc()">%</div>
             </th>
             <th>
               <div class="ph">토스쇼핑</div>
-              <div class="ph-fee">수수료 11.0%</div>
+              <div class="ph-fee">수수료 <input type="number" id="fee-ts" value="11" min="0" max="100" step="0.01" oninput="calc()">%</div>
             </th>
             <th>
               <div class="ph">기타</div>
-              <div class="ph-fee">
-                수수료 <input type="number" id="etc-fee" value="5" min="0" max="100" oninput="calc()">%
-              </div>
+              <div class="ph-fee">수수료 <input type="number" id="fee-etc" value="5" min="0" max="100" step="0.01" oninput="calc()">%</div>
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="margin-body">
           <tr>
             <td>판매가 입력 (원)</td>
             <td><input type="number" id="p-ss"  value="0" min="0" oninput="calc()"></td>
@@ -551,6 +579,9 @@ table.ctable {
           </tr>
         </tbody>
       </table>
+    </div>
+    <div class="add-platform-bar">
+      <button class="btn btn-ghost" onclick="addPlatform()">+ 플랫폼 추가</button>
     </div>
   </div>
 
@@ -635,13 +666,14 @@ table.ctable {
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const PID   = ['ss', 'cp', 'c24', 'ts', 'etc'];
-const PFEE  = { ss: 0.0563, cp: 0.106, c24: 0.035, ts: 0.11, etc: null };
+const PID = ['ss', 'cp', 'c24', 'ts', 'etc'];
 
 // ── State ──────────────────────────────────────────────────
-let taxable  = true;
-let costBase = 0;          // 총원가 합계 (shared)
-let mgnMap   = {};         // { pid: { margin, price } }
+let taxable        = true;
+let costBase       = 0;
+let mgnMap         = {};
+let customPlatforms = [];
+let customCounter  = 0;
 
 // ── Helpers ────────────────────────────────────────────────
 const $   = id => document.getElementById(id);
@@ -662,6 +694,20 @@ function setText(id, text, cls = '') {
   el.textContent = text;
   el.className   = cls;
 }
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Fee rate getter ────────────────────────────────────────
+function getFeeRate(pid) {
+  const el = $('fee-' + pid);
+  if (el) return (parseFloat(el.value) || 0) / 100;
+  return 0;
+}
 
 // ── Tax toggle ─────────────────────────────────────────────
 function setTax(on) {
@@ -676,24 +722,27 @@ function setTax(on) {
 // ── Main calculation ───────────────────────────────────────
 function calc() {
   // ── Section 1 ──────────────────────────────────────────
-  const mfg   = num('cost-mfg');
-  const labor = num('cost-labor');
-  const other = num('cost-other');
-  const packs = [1,2,3,4,5,6].map(i => num('pack' + i));
+  const mfg    = num('cost-mfg');
+  const labor  = num('cost-labor');
+  const other  = num('cost-other');
+  const packs  = [1,2,3,4,5,6].map(i => num('pack' + i));
   const packSum = packs.reduce((a, b) => a + b, 0);
   costBase = mfg + packSum + labor + other;
 
-  $('pack-total').textContent    = fmtW(packSum);
+  $('pack-total').textContent      = fmtW(packSum);
   $('total-cost-disp').textContent = fmtW(costBase);
 
   // ── Section 2 ──────────────────────────────────────────
-  const freeMin  = num('free-min',  30000);
-  const shipUnit = num('ship-cost', 3000);
+  const freeMin    = num('free-min', 30000);
+  const shipSeller = num('ship-seller', 3000);
+  // ship-buyer is excluded from margin calc (paid by consumer)
 
-  // ── Section 3: per-platform ────────────────────────────
+  // ── Section 3: per-platform (base + custom) ────────────
+  const allPids = [...PID, ...customPlatforms.map(p => p.id)];
+
   mgnMap = {};
-  PID.forEach(pid => {
-    const feeRate = pid === 'etc' ? num('etc-fee', 5) / 100 : PFEE[pid];
+  allPids.forEach(pid => {
+    const feeRate = getFeeRate(pid);
     const price   = num('p-' + pid);
     const ad      = num('ad-' + pid);
 
@@ -704,10 +753,10 @@ function calc() {
       return;
     }
 
-    const ship   = price >= freeMin ? 0 : shipUnit;
-    const fee    = price * feeRate;
-    const vat    = taxable ? price / 11 : 0;
-    const total  = costBase + ship + fee + vat + ad;
+    const ship  = price >= freeMin ? 0 : shipSeller;
+    const fee   = price * feeRate;
+    const vat   = taxable ? price / 11 : 0;
+    const total = costBase + ship + fee + vat + ad;
     const margin = price - total;
     const mRate  = price > 0 ? margin / price : 0;
 
@@ -719,7 +768,6 @@ function calc() {
     setText('v-tot-'  + pid, fmtW(total));
     setText('v-mgn-'  + pid, fmtW(margin));
 
-    // Margin rate with color
     const mEl = $('v-mrt-' + pid);
     if (mEl) {
       mEl.textContent = fmtPct(mRate);
@@ -729,9 +777,9 @@ function calc() {
     }
   });
 
-  // ── Section 4: Reverse ────────────────────────────────
+  // ── Section 4: Reverse (base platforms only) ──────────
   PID.forEach(pid => {
-    const feeRate   = pid === 'etc' ? num('etc-fee', 5) / 100 : PFEE[pid];
+    const feeRate   = getFeeRate(pid);
     const targetPct = num('tg-' + pid, 30);
     const targetR   = targetPct / 100;
     const ad        = num('ad-' + pid);
@@ -740,20 +788,19 @@ function calc() {
 
     if (denom <= 0) { setText('rv-' + pid, '계산불가'); return; }
 
-    // Try without shipping cost first
     const spNoShip = (costBase + ad) / denom;
     let minPrice;
     if (spNoShip >= freeMin) {
       minPrice = ceilTo(spNoShip, 100);
     } else {
-      const spWithShip = (costBase + shipUnit + ad) / denom;
+      const spWithShip = (costBase + shipSeller + ad) / denom;
       minPrice = ceilTo(spWithShip, 100);
     }
 
     setText('rv-' + pid, minPrice.toLocaleString('ko-KR') + '원');
   });
 
-  // ── Section 5: BEP ───────────────────────────────────
+  // ── Section 5: BEP (base platforms only) ─────────────
   PID.forEach(pid => {
     const fx               = num('fx-' + pid);
     const { margin, price } = mgnMap[pid] || { margin: 0, price: 0 };
@@ -772,13 +819,78 @@ function calc() {
   });
 }
 
+// ── Custom platform management ─────────────────────────────
+function addPlatform() {
+  const name = prompt('플랫폼명을 입력하세요 (예: 네이버쇼핑, 11번가)');
+  if (!name || !name.trim()) return;
+  const feeStr = prompt('수수료율을 입력하세요 (%)', '5');
+  if (feeStr === null) return;
+  const fee = parseFloat(feeStr) || 0;
+  const id  = 'cx' + (customCounter++);
+  customPlatforms.push({ id, name: name.trim(), fee });
+  insertPlatformColumn(id, name.trim(), fee);
+  calc();
+}
+
+function removePlatform(id) {
+  customPlatforms = customPlatforms.filter(p => p.id !== id);
+  document.querySelectorAll('[data-pid="' + id + '"]').forEach(el => el.remove());
+  delete mgnMap[id];
+}
+
+function insertPlatformColumn(id, name, fee) {
+  // Add <th> to header
+  const headerRow = $('platform-header');
+  const th = document.createElement('th');
+  th.dataset.pid = id;
+  th.innerHTML =
+    '<div class="ph">' + escHtml(name) + '</div>' +
+    '<div class="ph-fee">수수료 <input type="number" id="fee-' + id + '" value="' + fee + '" min="0" max="100" step="0.01" oninput="calc()">%</div>' +
+    '<div style="margin-top:4px;"><button class="btn btn-danger" onclick="removePlatform(\'' + id + '\')">삭제</button></div>';
+  headerRow.appendChild(th);
+
+  // Row templates (order matches tbody rows)
+  const rowTemplates = [
+    // 판매가
+    '<td data-pid="' + id + '"><input type="number" id="p-' + id + '" value="0" min="0" oninput="calc()"></td>',
+    // 광고비
+    '<td data-pid="' + id + '"><input type="number" id="ad-' + id + '" value="0" min="0" oninput="calc()"></td>',
+    // 배송비 부담
+    '<td data-pid="' + id + '" id="v-ship-' + id + '">-</td>',
+    // 수수료
+    '<td data-pid="' + id + '" id="v-fee-' + id + '">-</td>',
+    // 부가세
+    '<td data-pid="' + id + '" id="v-vat-' + id + '">-</td>',
+    // 총비용
+    '<td data-pid="' + id + '" id="v-tot-' + id + '">-</td>',
+    // 마진 금액
+    '<td data-pid="' + id + '" id="v-mgn-' + id + '">-</td>',
+    // 마진율
+    '<td data-pid="' + id + '" id="v-mrt-' + id + '">-</td>',
+  ];
+
+  const rows = $('margin-body').querySelectorAll('tr');
+  rows.forEach((row, i) => {
+    if (rowTemplates[i]) {
+      row.insertAdjacentHTML('beforeend', rowTemplates[i]);
+    }
+  });
+}
+
 // ── Reset ──────────────────────────────────────────────────
 function resetAll() {
   if (!confirm('모든 입력값을 초기화하시겠습니까?')) return;
+
+  // Remove custom platforms
+  customPlatforms.slice().forEach(p => removePlatform(p.id));
+  customPlatforms = [];
+  customCounter   = 0;
+
   document.querySelectorAll('input[type="number"]').forEach(el => {
     const defaults = {
-      'free-min': 30000, 'ship-cost': 3000, 'etc-fee': 5,
-      'tg-ss':30,'tg-cp':30,'tg-c24':30,'tg-ts':30,'tg-etc':30
+      'free-min': 30000, 'ship-seller': 3000, 'ship-buyer': 0,
+      'fee-ss': 5.63, 'fee-cp': 10.6, 'fee-c24': 3.5, 'fee-ts': 11, 'fee-etc': 5,
+      'tg-ss': 30, 'tg-cp': 30, 'tg-c24': 30, 'tg-ts': 30, 'tg-etc': 30
     };
     el.value = defaults[el.id] !== undefined ? defaults[el.id] : 0;
   });
@@ -792,22 +904,25 @@ function resetAll() {
 
 // ── Excel download ─────────────────────────────────────────
 function downloadExcel() {
-  const wb   = XLSX.utils.book_new();
-  const rows = [];
-  const pNames = ['스마트스토어','쿠팡','카페24','토스쇼핑','기타'];
+  const wb     = XLSX.utils.book_new();
+  const rows   = [];
+  const basePNames = ['스마트스토어','쿠팡','카페24','토스쇼핑','기타'];
+  const custPNames = customPlatforms.map(p => p.name);
+  const allPNames  = [...basePNames, ...custPNames];
+  const allPids    = [...PID, ...customPlatforms.map(p => p.id)];
   const getCell = id => { const el = $(id); return el ? el.textContent : '-'; };
 
   // Section 1
   rows.push(['[ 섹션1 ] 원가 입력']);
   rows.push(['제조원가 / 공급가', num('cost-mfg')]);
-  rows.push(['포장재① (박스)',   num('pack1')]);
-  rows.push(['포장재② (완충재)', num('pack2')]);
-  rows.push(['포장재③ (테이프)', num('pack3')]);
-  rows.push(['포장재④ (라벨)',   num('pack4')]);
+  rows.push(['포장재① (박스)',    num('pack1')]);
+  rows.push(['포장재② (완충재)',  num('pack2')]);
+  rows.push(['포장재③ (테이프)',  num('pack3')]);
+  rows.push(['포장재④ (라벨)',    num('pack4')]);
   rows.push(['포장재⑤ (설명서)', num('pack5')]);
-  rows.push(['포장재⑥ (기타)',   num('pack6')]);
-  rows.push(['인건비',          num('cost-labor')]);
-  rows.push(['기타비용',        num('cost-other')]);
+  rows.push(['포장재⑥ (기타)',    num('pack6')]);
+  rows.push(['인건비',            num('cost-labor')]);
+  rows.push(['기타비용',          num('cost-other')]);
   rows.push(['포장재 합계', [1,2,3,4,5,6].reduce((a,i)=>a+num('pack'+i),0)]);
   rows.push(['총원가 합계', costBase]);
   rows.push(['과세 구분', taxable ? '과세' : '면세']);
@@ -815,34 +930,35 @@ function downloadExcel() {
 
   // Section 2
   rows.push(['[ 섹션2 ] 배송비']);
-  rows.push(['무료배송 기준금액', num('free-min', 30000)]);
-  rows.push(['배송비 단가',      num('ship-cost', 3000)]);
+  rows.push(['무료배송 기준금액',    num('free-min', 30000)]);
+  rows.push(['판매자 부담 배송비',   num('ship-seller', 3000)]);
+  rows.push(['소비자 부담 배송비',   num('ship-buyer', 0)]);
   rows.push([]);
 
   // Section 3
   rows.push(['[ 섹션3 ] 플랫폼별 마진']);
-  rows.push(['항목', ...pNames]);
-  rows.push(['수수료율', '5.63%','10.6%','3.5%','11.0%', num('etc-fee')+'%']);
-  rows.push(['판매가',   ...PID.map(p => num('p-'+p))]);
-  rows.push(['광고비',   ...PID.map(p => num('ad-'+p))]);
-  rows.push(['배송비 부담', ...PID.map(p => getCell('v-ship-'+p))]);
-  rows.push(['수수료',      ...PID.map(p => getCell('v-fee-'+p))]);
-  rows.push(['부가세',      ...PID.map(p => getCell('v-vat-'+p))]);
-  rows.push(['총비용',      ...PID.map(p => getCell('v-tot-'+p))]);
-  rows.push(['마진 금액',   ...PID.map(p => getCell('v-mgn-'+p))]);
-  rows.push(['마진율',      ...PID.map(p => getCell('v-mrt-'+p))]);
+  rows.push(['항목', ...allPNames]);
+  rows.push(['수수료율', ...allPids.map(p => (getFeeRate(p)*100).toFixed(2)+'%')]);
+  rows.push(['판매가',   ...allPids.map(p => num('p-'+p))]);
+  rows.push(['광고비',   ...allPids.map(p => num('ad-'+p))]);
+  rows.push(['배송비 부담', ...allPids.map(p => getCell('v-ship-'+p))]);
+  rows.push(['수수료',      ...allPids.map(p => getCell('v-fee-'+p))]);
+  rows.push(['부가세',      ...allPids.map(p => getCell('v-vat-'+p))]);
+  rows.push(['총비용',      ...allPids.map(p => getCell('v-tot-'+p))]);
+  rows.push(['마진 금액',   ...allPids.map(p => getCell('v-mgn-'+p))]);
+  rows.push(['마진율',      ...allPids.map(p => getCell('v-mrt-'+p))]);
   rows.push([]);
 
   // Section 4
   rows.push(['[ 섹션4 ] 역산 계산기']);
-  rows.push(['항목', ...pNames]);
+  rows.push(['항목', ...basePNames]);
   rows.push(['목표 마진율', ...PID.map(p => num('tg-'+p)+'%')]);
   rows.push(['최소 판매가', ...PID.map(p => getCell('rv-'+p))]);
   rows.push([]);
 
   // Section 5
   rows.push(['[ 섹션5 ] 손익분기점 (BEP)']);
-  rows.push(['항목', ...pNames]);
+  rows.push(['항목', ...basePNames]);
   rows.push(['월 고정비', ...PID.map(p => num('fx-'+p))]);
   rows.push(['BEP 수량', ...PID.map(p => getCell('bq-'+p))]);
   rows.push(['BEP 매출', ...PID.map(p => getCell('br-'+p))]);
