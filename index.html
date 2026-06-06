@@ -155,7 +155,8 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
-.field input[type="number"] {
+.field input[type="number"],
+.field select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border);
@@ -168,38 +169,48 @@ main {
 }
 .field input[type="number"]::-webkit-outer-spin-button,
 .field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-.field input[type="number"]:focus {
+.field input[type="number"]:focus,
+.field select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(59,130,246,.12);
 }
 
+/* ── Tax type select ── */
+.tax-select {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.tax-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+
+/* ── Tax badge ── */
+.tax-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.tax-badge.tb-tax       { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.tax-badge.tb-exempt    { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.tax-badge.tb-simplified { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+
 /* ── Toggle ── */
 .toggle-wrap { display: flex; align-items: center; gap: 10px; }
 .toggle-label { font-size: 13px; font-weight: 600; color: var(--text); }
-.toggle-group {
-  display: flex;
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 3px;
-  gap: 2px;
-}
-.toggle-btn {
-  padding: 5px 14px;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text2);
-  transition: all .15s;
-}
-.toggle-btn.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 1px 3px rgba(59,130,246,.35);
-}
 
 /* ── Summary boxes ── */
 .summary-row {
@@ -332,6 +343,20 @@ table.ctable {
 .ph-fee input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .ph-fee input:focus { outline: none; border-color: var(--accent); }
 
+/* VAT detail cell */
+.vat-detail {
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: right;
+  white-space: normal;
+  min-width: 110px;
+}
+.vat-detail .vd-row { display: flex; justify-content: space-between; gap: 6px; }
+.vat-detail .vd-label { color: var(--text2); }
+.vat-detail .vd-value { font-weight: 600; color: var(--text); }
+.vat-detail .vd-pay { font-weight: 700; color: #dc2626; }
+.vat-exempt-note { font-size: 11px; color: var(--text2); font-style: italic; }
+
 /* Info badge */
 .badge {
   display: inline-flex;
@@ -378,6 +403,17 @@ table.ctable {
   border-top: 1px solid var(--border);
 }
 
+/* Simplified rate section */
+.simplified-section {
+  display: none;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+}
+.simplified-section .field label { color: #c2410c; }
+
 /* Responsive */
 @media (max-width: 640px) {
   header { padding: 12px 14px; }
@@ -415,10 +451,11 @@ table.ctable {
       <h2><span class="section-num">1</span> 원가 입력</h2>
       <div class="toggle-wrap">
         <span class="toggle-label">과세 구분</span>
-        <div class="toggle-group">
-          <button class="toggle-btn active" id="tax-on"  onclick="setTax(true)">과세</button>
-          <button class="toggle-btn"        id="tax-off" onclick="setTax(false)">면세</button>
-        </div>
+        <select id="tax-type" class="tax-select" onchange="setTaxType()">
+          <option value="tax">과세 (일반과세자)</option>
+          <option value="exempt">면세</option>
+          <option value="simplified">간이과세자</option>
+        </select>
       </div>
     </div>
     <div class="card-body">
@@ -436,6 +473,17 @@ table.ctable {
           <label>기타비용</label>
           <input type="number" id="cost-other" value="0" min="0" oninput="calc()">
         </div>
+      </div>
+
+      <!-- 간이과세자 업종별 부가가치율 -->
+      <div class="simplified-section" id="simplified-section">
+        <div class="input-grid" style="max-width:260px;">
+          <div class="field">
+            <label>업종별 부가가치율 (%)</label>
+            <input type="number" id="simplified-rate" value="15" min="0" max="100" step="0.1" oninput="calc()">
+          </div>
+        </div>
+        <div style="font-size:11px;color:#92400e;margin-top:6px;">※ 기본값 15% (소매업 기준) · 업종별 상이</div>
       </div>
 
       <div class="divider"></div>
@@ -466,8 +514,8 @@ table.ctable {
           <div class="svalue" id="total-cost-disp">0원</div>
         </div>
         <div class="summary-box" id="vat-box">
-          <div class="slabel">부가세 (플랫폼별)</div>
-          <div class="svalue" style="font-size:14px; margin-top:6px;" id="vat-note">판매가 ÷ 11</div>
+          <div class="slabel">부가세 계산 방식</div>
+          <div style="font-size:12px; margin-top:6px; line-height:1.6;" id="vat-note">판매가 ÷ 11 − 공급가 ÷ 11</div>
         </div>
       </div>
     </div>
@@ -511,22 +559,27 @@ table.ctable {
             <th>
               <div class="ph">스마트스토어</div>
               <div class="ph-fee">수수료 <input type="number" id="fee-ss" value="5.63" min="0" max="100" step="0.01" oninput="calc()">%</div>
+              <div class="tax-badge-wrap"></div>
             </th>
             <th>
               <div class="ph">쿠팡</div>
               <div class="ph-fee">수수료 <input type="number" id="fee-cp" value="10.6" min="0" max="100" step="0.01" oninput="calc()">%</div>
+              <div class="tax-badge-wrap"></div>
             </th>
             <th>
               <div class="ph">카페24</div>
               <div class="ph-fee">수수료 <input type="number" id="fee-c24" value="3.5" min="0" max="100" step="0.01" oninput="calc()">%</div>
+              <div class="tax-badge-wrap"></div>
             </th>
             <th>
               <div class="ph">토스쇼핑</div>
               <div class="ph-fee">수수료 <input type="number" id="fee-ts" value="11" min="0" max="100" step="0.01" oninput="calc()">%</div>
+              <div class="tax-badge-wrap"></div>
             </th>
             <th>
               <div class="ph">기타</div>
               <div class="ph-fee">수수료 <input type="number" id="fee-etc" value="5" min="0" max="100" step="0.01" oninput="calc()">%</div>
+              <div class="tax-badge-wrap"></div>
             </th>
           </tr>
         </thead>
@@ -558,7 +611,7 @@ table.ctable {
             <td id="v-fee-c24">-</td><td id="v-fee-ts">-</td><td id="v-fee-etc">-</td>
           </tr>
           <tr id="vat-row">
-            <td>부가세</td>
+            <td id="vat-row-label">부가세 (매출-매입)</td>
             <td id="v-vat-ss">-</td><td id="v-vat-cp">-</td>
             <td id="v-vat-c24">-</td><td id="v-vat-ts">-</td><td id="v-vat-etc">-</td>
           </tr>
@@ -669,7 +722,8 @@ table.ctable {
 const PID = ['ss', 'cp', 'c24', 'ts', 'etc'];
 
 // ── State ──────────────────────────────────────────────────
-let taxable        = true;
+// taxType: 'tax' | 'exempt' | 'simplified'
+let taxType        = 'tax';
 let costBase       = 0;
 let mgnMap         = {};
 let customPlatforms = [];
@@ -694,6 +748,12 @@ function setText(id, text, cls = '') {
   el.textContent = text;
   el.className   = cls;
 }
+function setHtml(id, html) {
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = html;
+  el.className = '';
+}
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -709,14 +769,108 @@ function getFeeRate(pid) {
   return 0;
 }
 
-// ── Tax toggle ─────────────────────────────────────────────
-function setTax(on) {
-  taxable = on;
-  $('tax-on').classList.toggle('active', on);
-  $('tax-off').classList.toggle('active', !on);
-  $('vat-row').style.display  = on ? '' : 'none';
-  $('vat-box').style.display  = on ? '' : 'none';
+// ── Tax badge HTML ─────────────────────────────────────────
+function getTaxBadgeHtml() {
+  if (taxType === 'tax')        return '<span class="tax-badge tb-tax">과세</span>';
+  if (taxType === 'exempt')     return '<span class="tax-badge tb-exempt">면세</span>';
+  if (taxType === 'simplified') return '<span class="tax-badge tb-simplified">간이</span>';
+  return '';
+}
+
+// ── Update all tax badges ──────────────────────────────────
+function updateTaxBadges() {
+  document.querySelectorAll('.tax-badge-wrap').forEach(el => {
+    el.innerHTML = getTaxBadgeHtml();
+  });
+}
+
+// ── Update VAT row label ───────────────────────────────────
+function updateVatRowLabel() {
+  const lbl = $('vat-row-label');
+  if (!lbl) return;
+  if (taxType === 'tax')        lbl.textContent = '부가세 (매출-매입)';
+  else if (taxType === 'simplified') lbl.textContent = '부가세 (납부세액)';
+  else                          lbl.textContent = '부가세';
+}
+
+// ── Update vat-note summary ────────────────────────────────
+function updateVatNote() {
+  const el = $('vat-note');
+  if (!el) return;
+  if (taxType === 'tax') {
+    el.innerHTML = '매출: 판매가÷11<br>매입: 공급가÷11<br><strong>납부 = 매출 − 매입</strong>';
+  } else if (taxType === 'simplified') {
+    const rate = num('simplified-rate', 15);
+    el.innerHTML = `납부세액 = 판매가 × ${rate}% × 10%`;
+  } else {
+    el.textContent = '해당없음 (0원)';
+  }
+}
+
+// ── Tax type change ────────────────────────────────────────
+function setTaxType() {
+  taxType = $('tax-type').value;
+
+  // Show/hide simplified rate section
+  const simpSec = $('simplified-section');
+  if (simpSec) simpSec.style.display = taxType === 'simplified' ? '' : 'none';
+
+  // Show/hide vat-row & vat-box
+  const vatRow = $('vat-row');
+  const vatBox = $('vat-box');
+  if (vatRow) vatRow.style.display = taxType === 'exempt' ? 'none' : '';
+  if (vatBox) vatBox.style.display = '';
+
+  updateVatRowLabel();
+  updateVatNote();
+  updateTaxBadges();
   calc();
+}
+
+// ── Legacy setTax (kept for compatibility) ─────────────────
+function setTax(on) {
+  $('tax-type').value = on ? 'tax' : 'exempt';
+  setTaxType();
+}
+
+// ── VAT calculation per platform ──────────────────────────
+function calcVatAmount(price, mfgCost) {
+  if (taxType === 'tax') {
+    if (price <= 0) return 0;
+    const outputVat = price / 11;
+    const inputVat  = mfgCost / 11;
+    return outputVat - inputVat;
+  } else if (taxType === 'simplified') {
+    if (price <= 0) return 0;
+    const rate = num('simplified-rate', 15) / 100;
+    return price * rate * 0.1;
+  }
+  return 0; // exempt
+}
+
+// ── VAT cell HTML ──────────────────────────────────────────
+function vatCellHtml(price, mfgCost) {
+  if (taxType === 'exempt') {
+    return '<span class="vat-exempt-note">해당없음</span>';
+  }
+  if (price <= 0) return '-';
+
+  if (taxType === 'tax') {
+    const outputVat = price / 11;
+    const inputVat  = mfgCost / 11;
+    const netVat    = outputVat - inputVat;
+    return `<div class="vat-detail">
+      <div class="vd-row"><span class="vd-label">매출</span><span class="vd-value">${fmtW(outputVat)}</span></div>
+      <div class="vd-row"><span class="vd-label">매입</span><span class="vd-value">-${fmtW(inputVat)}</span></div>
+      <div class="vd-row"><span class="vd-label">납부</span><span class="vd-pay">${fmtW(netVat)}</span></div>
+    </div>`;
+  } else { // simplified
+    const rate   = num('simplified-rate', 15) / 100;
+    const vatAmt = price * rate * 0.1;
+    return `<div class="vat-detail">
+      <div class="vd-row"><span class="vd-label">납부세액</span><span class="vd-pay">${fmtW(vatAmt)}</span></div>
+    </div>`;
+  }
 }
 
 // ── Main calculation ───────────────────────────────────────
@@ -731,11 +885,11 @@ function calc() {
 
   $('pack-total').textContent      = fmtW(packSum);
   $('total-cost-disp').textContent = fmtW(costBase);
+  updateVatNote();
 
   // ── Section 2 ──────────────────────────────────────────
   const freeMin    = num('free-min', 30000);
   const shipSeller = num('ship-seller', 3000);
-  // ship-buyer is excluded from margin calc (paid by consumer)
 
   // ── Section 3: per-platform (base + custom) ────────────
   const allPids = [...PID, ...customPlatforms.map(p => p.id)];
@@ -747,16 +901,21 @@ function calc() {
     const ad      = num('ad-' + pid);
 
     if (price <= 0) {
-      ['ship','fee','vat','tot','mgn'].forEach(k => setText(`v-${k}-${pid}`, '-'));
+      ['ship','fee','tot','mgn'].forEach(k => setText(`v-${k}-${pid}`, '-'));
+      if (taxType === 'exempt') {
+        setHtml('v-vat-' + pid, '<span class="vat-exempt-note">해당없음</span>');
+      } else {
+        setText('v-vat-' + pid, '-');
+      }
       setText('v-mrt-' + pid, '-');
       mgnMap[pid] = { margin: 0, price: 0 };
       return;
     }
 
-    const ship  = price >= freeMin ? 0 : shipSeller;
-    const fee   = price * feeRate;
-    const vat   = taxable ? price / 11 : 0;
-    const total = costBase + ship + fee + vat + ad;
+    const ship   = price >= freeMin ? 0 : shipSeller;
+    const fee    = price * feeRate;
+    const vat    = calcVatAmount(price, mfg);
+    const total  = costBase + ship + fee + vat + ad;
     const margin = price - total;
     const mRate  = price > 0 ? margin / price : 0;
 
@@ -764,7 +923,7 @@ function calc() {
 
     setText('v-ship-' + pid, fmtW(ship));
     setText('v-fee-'  + pid, fmtW(fee));
-    setText('v-vat-'  + pid, fmtW(vat));
+    setHtml('v-vat-'  + pid, vatCellHtml(price, mfg));
     setText('v-tot-'  + pid, fmtW(total));
     setText('v-mgn-'  + pid, fmtW(margin));
 
@@ -783,9 +942,19 @@ function calc() {
     const targetPct = num('tg-' + pid, 30);
     const targetR   = targetPct / 100;
     const ad        = num('ad-' + pid);
-    const vatF      = taxable ? 1 / 11 : 0;
-    const denom     = 1 - feeRate - vatF - targetR;
 
+    let vatF = 0;
+    if (taxType === 'tax') {
+      // net VAT rate on price: (price/11 - mfg/11) / price ≈ 1/11 (approx, mfg unknown at this step)
+      // Use simplified: effective vat fraction ~ 1/11 minus mfg contribution
+      // For reverse calc we approximate: (1 - mfg/price) / 11 ≈ just use 1/11 as conservative
+      vatF = 1 / 11;
+    } else if (taxType === 'simplified') {
+      const rate = num('simplified-rate', 15) / 100;
+      vatF = rate * 0.1;
+    }
+
+    const denom = 1 - feeRate - vatF - targetR;
     if (denom <= 0) { setText('rv-' + pid, '계산불가'); return; }
 
     const spNoShip = (costBase + ad) / denom;
@@ -846,6 +1015,7 @@ function insertPlatformColumn(id, name, fee) {
   th.innerHTML =
     '<div class="ph">' + escHtml(name) + '</div>' +
     '<div class="ph-fee">수수료 <input type="number" id="fee-' + id + '" value="' + fee + '" min="0" max="100" step="0.01" oninput="calc()">%</div>' +
+    '<div class="tax-badge-wrap">' + getTaxBadgeHtml() + '</div>' +
     '<div style="margin-top:4px;"><button class="btn btn-danger" onclick="removePlatform(\'' + id + '\')">삭제</button></div>';
   headerRow.appendChild(th);
 
@@ -890,16 +1060,47 @@ function resetAll() {
     const defaults = {
       'free-min': 30000, 'ship-seller': 3000, 'ship-buyer': 0,
       'fee-ss': 5.63, 'fee-cp': 10.6, 'fee-c24': 3.5, 'fee-ts': 11, 'fee-etc': 5,
-      'tg-ss': 30, 'tg-cp': 30, 'tg-c24': 30, 'tg-ts': 30, 'tg-etc': 30
+      'tg-ss': 30, 'tg-cp': 30, 'tg-c24': 30, 'tg-ts': 30, 'tg-etc': 30,
+      'simplified-rate': 15
     };
     el.value = defaults[el.id] !== undefined ? defaults[el.id] : 0;
   });
-  taxable = true;
-  $('tax-on').classList.add('active');
-  $('tax-off').classList.remove('active');
+
+  taxType = 'tax';
+  $('tax-type').value = 'tax';
+  $('simplified-section').style.display = 'none';
   $('vat-row').style.display = '';
   $('vat-box').style.display = '';
+
+  updateVatRowLabel();
+  updateVatNote();
+  updateTaxBadges();
   calc();
+}
+
+// ── VAT cell plain text (for Excel) ───────────────────────
+function vatCellText(pid) {
+  const price   = num('p-' + pid);
+  const mfgCost = num('cost-mfg');
+  if (taxType === 'exempt') return '해당없음';
+  if (price <= 0) return '-';
+  if (taxType === 'tax') {
+    const outputVat = price / 11;
+    const inputVat  = mfgCost / 11;
+    const netVat    = outputVat - inputVat;
+    return `매출:${Math.round(outputVat)} 매입:${Math.round(inputVat)} 납부:${Math.round(netVat)}`;
+  } else {
+    const rate   = num('simplified-rate', 15) / 100;
+    const vatAmt = price * rate * 0.1;
+    return `납부세액:${Math.round(vatAmt)}`;
+  }
+}
+
+function taxTypeLabel() {
+  if (taxType === 'tax')        return '과세 (일반과세자)';
+  if (taxType === 'exempt')     return '면세';
+  if (taxType === 'simplified') return `간이과세자 (부가가치율 ${num('simplified-rate', 15)}%)`;
+  return '';
 }
 
 // ── Excel download ─────────────────────────────────────────
@@ -925,7 +1126,7 @@ function downloadExcel() {
   rows.push(['기타비용',          num('cost-other')]);
   rows.push(['포장재 합계', [1,2,3,4,5,6].reduce((a,i)=>a+num('pack'+i),0)]);
   rows.push(['총원가 합계', costBase]);
-  rows.push(['과세 구분', taxable ? '과세' : '면세']);
+  rows.push(['과세 구분', taxTypeLabel()]);
   rows.push([]);
 
   // Section 2
@@ -943,7 +1144,7 @@ function downloadExcel() {
   rows.push(['광고비',   ...allPids.map(p => num('ad-'+p))]);
   rows.push(['배송비 부담', ...allPids.map(p => getCell('v-ship-'+p))]);
   rows.push(['수수료',      ...allPids.map(p => getCell('v-fee-'+p))]);
-  rows.push(['부가세',      ...allPids.map(p => getCell('v-vat-'+p))]);
+  rows.push(['부가세',      ...allPids.map(p => vatCellText(p))]);
   rows.push(['총비용',      ...allPids.map(p => getCell('v-tot-'+p))]);
   rows.push(['마진 금액',   ...allPids.map(p => getCell('v-mgn-'+p))]);
   rows.push(['마진율',      ...allPids.map(p => getCell('v-mrt-'+p))]);
@@ -988,6 +1189,8 @@ function downloadExcel() {
 }
 
 // ── Init ───────────────────────────────────────────────────
+updateTaxBadges();
+updateVatRowLabel();
 calc();
 </script>
 </body>
