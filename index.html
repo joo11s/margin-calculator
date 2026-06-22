@@ -173,7 +173,7 @@ main {
 .field select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+  box-shadow: 0 0 0 3px rgba(245,230,200,.15);
 }
 
 /* ── Tax type select ── */
@@ -299,15 +299,15 @@ table.ctable {
   font-size: 13px;
   text-align: right;
   background: #14142a;
+  color: var(--text);
   -moz-appearance: textfield;
-  transition: border-color .15s;
 }
 .ctable td input[type="number"]::-webkit-outer-spin-button,
 .ctable td input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .ctable td input[type="number"]:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(59,130,246,.1);
+  box-shadow: 0 0 0 2px rgba(245,230,200,.12);
 }
 .ctable .row-alt td { background: #1a1a2e; }
 .ctable .row-alt td:first-child { background: #1a1a2e; }
@@ -337,6 +337,8 @@ table.ctable {
   border: 1px solid var(--border);
   border-radius: 4px;
   text-align: right;
+  background: #14142a;
+  color: var(--text);
   -moz-appearance: textfield;
 }
 .ph-fee input::-webkit-outer-spin-button,
