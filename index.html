@@ -739,13 +739,16 @@ table.ctable {
   <div class="card">
     <div class="card-header">
       <h2><span class="section-num">2</span> 배송비 설정</h2>
+      <div class="toggle-wrap">
+        <span class="toggle-label">배송비 부담</span>
+        <select id="ship-mode" class="tax-select" onchange="calc()">
+          <option value="seller">판매자 부담 (무료배송)</option>
+          <option value="buyer">소비자 부담 (유료배송)</option>
+        </select>
+      </div>
     </div>
     <div class="card-body">
       <div class="input-grid">
-        <div class="field">
-          <label>무료배송 기준금액 (원)</label>
-          <input type="number" id="free-min" value="30000" min="0" oninput="calc()">
-        </div>
         <div class="field">
           <label>판매자 부담 배송비 (원)</label>
           <input type="number" id="ship-seller" value="3000" min="0" oninput="calc()">
@@ -755,7 +758,7 @@ table.ctable {
           <input type="number" id="ship-buyer" value="0" min="0" oninput="calc()">
         </div>
       </div>
-      <p class="ship-note">※ 무료배송 기준 이상(판매자 부담) → 원가 = 공급가 + 판매자 부담 배송비 · 미만(소비자 부담) → 원가 = 공급가 + (소비자 부담 배송비 − 판매자 부담 배송비) · 두 값이 같으면 원가 변동 없음</p>
+      <p class="ship-note">※ 판매자 부담 선택 시 → 원가 = 공급가 + 판매자 부담 배송비 · 소비자 부담 선택 시 → 원가 = 공급가 + (소비자 부담 배송비 − 판매자 부담 배송비) · 두 값이 같으면 원가 변동 없음</p>
     </div>
   </div>
   <!-- ── Section 3: 플랫폼별 마진 ── -->
@@ -1068,10 +1071,11 @@ function calc() {
   $('pack-total').textContent      = fmtW(packSum);
   $('total-cost-disp').textContent = fmtW(costBase);
   updateVatNote();
-  const freeMin    = num('free-min', 30000);
   const shipSeller = num('ship-seller', 3000);
+  const shipBuyer  = num('ship-buyer', 0);
+  const shipMode   = $('ship-mode') ? $('ship-mode').value : 'seller';
+  const shipAdj    = shipMode === 'seller' ? shipSeller : (shipBuyer - shipSeller);
   const allPids = [...PID, ...customPlatforms.map(p => p.id)];
-  const shipBuyer = num('ship-buyer', 0);
   const packOther = costBase - mfg; // 포장재+인건비+기타비용 (배송조정과 무관한 고정 원가)
   mgnMap = {};
   allPids.forEach(pid => {
@@ -1089,10 +1093,7 @@ function calc() {
       mgnMap[pid] = { margin: 0, price: 0 };
       return;
     }
-    // 무료배송 기준 이상 = 판매자 부담(공급가+판매자부담배송비)
-    // 무료배송 기준 미만 = 소비자 부담(공급가+(소비자부담배송비-판매자부담배송비))
-    const isFree  = price >= freeMin;
-    const shipAdj = isFree ? shipSeller : (shipBuyer - shipSeller);
+    // 판매자 부담(무료배송) = 공급가+판매자부담배송비 / 소비자 부담(유료배송) = 공급가+(소비자부담배송비-판매자부담배송비)
     const adjMfg  = mfg + shipAdj;
     const eCost   = adjMfg + packOther;
     const fee     = price * feeRate;
@@ -1129,22 +1130,10 @@ function calc() {
     }
     const denom = 1 - feeRate - vatF - targetR;
     if (denom <= 0) { setText('rv-' + pid, '계산불가'); return; }
-    // Branch 1: 소비자 부담(유료배송) 가정 → 원가 = 공급가+(소비자부담배송비-판매자부담배송비)
-    const adjMfg1   = mfg + (shipBuyer - shipSeller);
-    const vatFixed1 = taxType === 'tax' ? adjMfg1 / 11 : 0;
-    const num1      = adjMfg1 + packOther - vatFixed1 + ad;
-    const price1    = num1 / denom;
-    let minPrice;
-    if (price1 < freeMin) {
-      minPrice = ceilTo(price1, 100);
-    } else {
-      // Branch 2: 판매자 부담(무료배송) 가정 → 원가 = 공급가+판매자부담배송비
-      const adjMfg2   = mfg + shipSeller;
-      const vatFixed2 = taxType === 'tax' ? adjMfg2 / 11 : 0;
-      const num2      = adjMfg2 + packOther - vatFixed2 + ad;
-      const price2    = num2 / denom;
-      minPrice = ceilTo(price2, 100);
-    }
+    const adjMfg    = mfg + shipAdj;
+    const vatFixed  = taxType === 'tax' ? adjMfg / 11 : 0;
+    const numer     = adjMfg + packOther - vatFixed + ad;
+    const minPrice  = ceilTo(numer / denom, 100);
     setText('rv-' + pid, minPrice.toLocaleString('ko-KR') + '원');
   });
   PID.forEach(pid => {
@@ -1212,7 +1201,7 @@ function resetAll() {
   customCounter   = 0;
   document.querySelectorAll('input[type="number"]').forEach(el => {
     const defaults = {
-      'free-min': 30000, 'ship-seller': 3000, 'ship-buyer': 0,
+      'ship-seller': 3000, 'ship-buyer': 0,
       'fee-ss': 5.63, 'fee-cp': 10.6, 'fee-c24': 3.5, 'fee-ts': 11, 'fee-etc': 5,
       'tg-ss': 30, 'tg-cp': 30, 'tg-c24': 30, 'tg-ts': 30, 'tg-etc': 30,
       'simplified-rate': 15
@@ -1221,6 +1210,7 @@ function resetAll() {
   });
   taxType = 'tax';
   $('tax-type').value = 'tax';
+  $('ship-mode').value = 'seller';
   $('simplified-section').style.display = 'none';
   $('vat-row').style.display = '';
   $('vat-box').style.display = '';
@@ -1234,8 +1224,8 @@ function vatCellText(pid) {
   const mfg     = num('cost-mfg');
   const sb      = num('ship-seller', 3000);
   const cb      = num('ship-buyer', 0);
-  const fm      = num('free-min', 30000);
-  const shipAdj = price >= fm ? sb : (cb - sb);
+  const mode    = $('ship-mode') ? $('ship-mode').value : 'seller';
+  const shipAdj = mode === 'seller' ? sb : (cb - sb);
   const mfgCost = mfg + shipAdj;
   if (taxType === 'exempt') return '해당없음';
   if (price <= 0) return '-';
@@ -1279,7 +1269,7 @@ function downloadExcel() {
   rows.push(['과세 구분', taxTypeLabel()]);
   rows.push([]);
   rows.push(['[ 섹션2 ] 배송비']);
-  rows.push(['무료배송 기준금액',    num('free-min', 30000)]);
+  rows.push(['배송비 부담 방식', ($('ship-mode') && $('ship-mode').value === 'buyer') ? '소비자 부담(유료배송)' : '판매자 부담(무료배송)']);
   rows.push(['판매자 부담 배송비',   num('ship-seller', 3000)]);
   rows.push(['소비자 부담 배송비',   num('ship-buyer', 0)]);
   rows.push([]);
