@@ -430,6 +430,109 @@ table.ctable {
   .two-col { grid-template-columns: 1fr; }
   .btn { padding: 7px 12px; font-size: 12px; }
 }
+
+/* ── Tabs ── */
+.tabs-nav {
+  display: flex;
+  gap: 8px;
+  padding: 20px 16px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+.tab-btn {
+  padding: 11px 22px;
+  border-radius: 10px 10px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--card);
+  color: var(--text2);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { background: var(--accent); color: #1a1a1a; }
+.tab-panel { display: none; }
+.tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Simple (Excel-style) calculator ── */
+.simple-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .simple-grid { grid-template-columns: 1fr; }
+}
+.excel-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.excel-table { width: 100%; border-collapse: collapse; }
+.excel-table th {
+  background: #4F81BD;
+  color: #fff;
+  font-weight: 700;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 13px;
+  border: 1px solid #3a6699;
+}
+.excel-table th.label-th { background: #4F81BD; }
+.excel-table td {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  text-align: right;
+}
+.excel-table td.label-cell {
+  background: #1a1a2e;
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.excel-table input[type="number"] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-align: right;
+  font-size: 14px;
+  padding: 4px 2px;
+  font-family: inherit;
+}
+.excel-table input[type="number"]:focus {
+  outline: none;
+  border-bottom: 1px solid var(--accent);
+}
+.excel-table input[type="number"]::-webkit-outer-spin-button,
+.excel-table input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+.excel-table tr.row-profit td:not(.label-cell) {
+  background: #FFFF00;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 14px;
+}
+.excel-table tr.row-profit td.label-cell { background: #4a4a1a; color: #FFFF00; font-weight: 700; }
+.excel-table tr.row-rev td:not(.label-cell) {
+  background: #92D050;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+.excel-table tr.row-rev td.label-cell { background: #23361a; color: #92D050; font-weight: 600; }
+.excel-note {
+  font-size: 12px;
+  color: var(--text2);
+  padding: 4px 4px 0;
+}
 </style>
 </head>
 <body>
@@ -445,7 +548,172 @@ table.ctable {
   </div>
 </header>
 
+
+<div class="tabs-nav">
+  <button class="tab-btn active" data-tab="simple" onclick="switchTab('simple')">🧮 간단 마진계산기</button>
+  <button class="tab-btn" data-tab="detailed" onclick="switchTab('detailed')">📊 상세 마진계산기</button>
+</div>
+
 <main>
+
+<div id="panel-simple" class="tab-panel active">
+
+  <div class="card">
+    <div class="card-header">
+      <h2><span class="section-num">1</span> 단순 마진계산기</h2>
+      <div class="toggle-wrap">
+        <button class="btn btn-ghost" onclick="resetSimple()">초기화</button>
+        <button class="btn btn-success" onclick="exportSimpleExcel()">⬇ 엑셀 다운로드</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="excel-note">엑셀 서식(단순_마진계산기.xlsx)과 동일한 항목·색상 구성입니다. 값을 입력하면 실시간으로 계산됩니다.</div>
+      <div class="simple-grid" style="margin-top:14px;">
+
+        <!-- 직거래 블록 -->
+        <div class="excel-card">
+          <table class="excel-table">
+            <colgroup><col style="width:38%"><col style="width:31%"><col style="width:31%"></colgroup>
+            <thead>
+              <tr>
+                <th class="label-th"></th>
+                <th>직거래 (VAT 포함)</th>
+                <th>직거래 (VAT 별도)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label-cell">판매가</td>
+                <td><input type="number" id="dt_sale_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_sale_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">공급가</td>
+                <td><input type="number" id="dt_cost_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_cost_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">택배비</td>
+                <td><input type="number" id="dt_ship_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_ship_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">플랫폼 수수료율 (%)</td>
+                <td><input type="number" id="dt_platform_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_platform_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">PG 수수료율 (%)</td>
+                <td><input type="number" id="dt_pg_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_pg_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">예비비 (%)</td>
+                <td><input type="number" id="dt_reserve_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="dt_reserve_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr class="row-profit">
+                <td class="label-cell">현재 순이익(마진)</td>
+                <td><span id="dt_profit_c1">0원</span></td>
+                <td><span id="dt_profit_c2">0원</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 5%)</td>
+                <td><span id="dt_rev5_c1">-</span></td>
+                <td><span id="dt_rev5_c2">-</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 10%)</td>
+                <td><span id="dt_rev10_c1">-</span></td>
+                <td><span id="dt_rev10_c2">-</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 15%)</td>
+                <td><span id="dt_rev15_c1">-</span></td>
+                <td><span id="dt_rev15_c2">-</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 도매 사이트 블록 -->
+        <div class="excel-card">
+          <table class="excel-table">
+            <colgroup><col style="width:38%"><col style="width:31%"><col style="width:31%"></colgroup>
+            <thead>
+              <tr>
+                <th class="label-th"></th>
+                <th>도매 사이트 (VAT 포함)</th>
+                <th>도매 사이트 (VAT 별도)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label-cell">판매가</td>
+                <td><input type="number" id="ws_sale_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_sale_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">공급가</td>
+                <td><input type="number" id="ws_cost_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_cost_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">택배비</td>
+                <td><input type="number" id="ws_ship_c1" placeholder="0" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_ship_c2" placeholder="0" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">도매 수수료 (%)</td>
+                <td><input type="number" id="ws_wholesale_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_wholesale_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">플랫폼 수수료율 (%)</td>
+                <td><input type="number" id="ws_platform_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_platform_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">PG 수수료율 (%)</td>
+                <td><input type="number" id="ws_pg_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_pg_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr>
+                <td class="label-cell">예비비 (%)</td>
+                <td><input type="number" id="ws_reserve_c1" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+                <td><input type="number" id="ws_reserve_c2" placeholder="0" step="0.1" oninput="calcSimple()"></td>
+              </tr>
+              <tr class="row-profit">
+                <td class="label-cell">현재 순이익(마진)</td>
+                <td><span id="ws_profit_c1">0원</span></td>
+                <td><span id="ws_profit_c2">0원</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 5%)</td>
+                <td><span id="ws_rev5_c1">-</span></td>
+                <td><span id="ws_rev5_c2">-</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 10%)</td>
+                <td><span id="ws_rev10_c1">-</span></td>
+                <td><span id="ws_rev10_c2">-</span></td>
+              </tr>
+              <tr class="row-rev">
+                <td class="label-cell">판매가 역산(마진 15%)</td>
+                <td><span id="ws_rev15_c1">-</span></td>
+                <td><span id="ws_rev15_c2">-</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="panel-detailed" class="tab-panel">
 
   <!-- ── Section 1: 원가 입력 ── -->
   <div class="card">
@@ -717,6 +985,7 @@ table.ctable {
     ※ 수수료 기준 2026.06 &nbsp;|&nbsp; 스마트스토어 5.63% &nbsp;·&nbsp; 쿠팡 10.6% &nbsp;·&nbsp; 카페24 3.5% &nbsp;·&nbsp; 토스쇼핑 11.0%
   </p>
 
+</div>
 </main>
 
 <script>
@@ -1190,10 +1459,118 @@ function downloadExcel() {
   XLSX.writeFile(wb, `마진계산기_${today}.xlsx`);
 }
 
+
+// ── Simple (Excel-style) margin calculator ──────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.getElementById('panel-simple').classList.toggle('active', name === 'simple');
+  document.getElementById('panel-detailed').classList.toggle('active', name === 'detailed');
+}
+
+function getNum(id) {
+  const el = document.getElementById(id);
+  return el ? (parseFloat(el.value) || 0) : 0;
+}
+
+function fmtWon(n) {
+  if (!isFinite(n)) return '계산불가';
+  const r = Math.round(n);
+  return (r < 0 ? '-' : '') + Math.abs(r).toLocaleString() + '원';
+}
+
+function computeMargin(sale, cost, ship, platform, pg, reserve, wholesale) {
+  const feeRate = (platform + pg + reserve + wholesale) / 100;
+  const profit = sale - cost - ship - sale * feeRate;
+  const denom = 1 - feeRate;
+  const rev = (mPct) => {
+    const d = denom - mPct / 100;
+    if (d <= 0) return NaN;
+    return (cost + ship) / d;
+  };
+  return { profit, rev5: rev(5), rev10: rev(10), rev15: rev(15) };
+}
+
+function setResult(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (isNaN(val)) {
+    el.textContent = '계산불가';
+    el.style.color = '#b91c1c';
+    return;
+  }
+  el.textContent = fmtWon(val);
+  el.style.color = val < 0 ? '#b91c1c' : '#1a1a1a';
+}
+
+function calcSimple() {
+  ['c1', 'c2'].forEach(col => {
+    const sale = getNum('dt_sale_' + col);
+    const cost = getNum('dt_cost_' + col);
+    const ship = getNum('dt_ship_' + col);
+    const platform = getNum('dt_platform_' + col);
+    const pg = getNum('dt_pg_' + col);
+    const reserve = getNum('dt_reserve_' + col);
+    const r = computeMargin(sale, cost, ship, platform, pg, reserve, 0);
+    setResult('dt_profit_' + col, r.profit);
+    setResult('dt_rev5_' + col, r.rev5);
+    setResult('dt_rev10_' + col, r.rev10);
+    setResult('dt_rev15_' + col, r.rev15);
+  });
+  ['c1', 'c2'].forEach(col => {
+    const sale = getNum('ws_sale_' + col);
+    const cost = getNum('ws_cost_' + col);
+    const ship = getNum('ws_ship_' + col);
+    const wholesale = getNum('ws_wholesale_' + col);
+    const platform = getNum('ws_platform_' + col);
+    const pg = getNum('ws_pg_' + col);
+    const reserve = getNum('ws_reserve_' + col);
+    const r = computeMargin(sale, cost, ship, platform, pg, reserve, wholesale);
+    setResult('ws_profit_' + col, r.profit);
+    setResult('ws_rev5_' + col, r.rev5);
+    setResult('ws_rev10_' + col, r.rev10);
+    setResult('ws_rev15_' + col, r.rev15);
+  });
+}
+
+function resetSimple() {
+  document.querySelectorAll('#panel-simple input[type="number"]').forEach(i => i.value = '');
+  calcSimple();
+}
+
+function exportSimpleExcel() {
+  const g = id => { const el = document.getElementById(id); return el ? (parseFloat(el.value) || '') : ''; };
+  const gv = id => { const el = document.getElementById(id); return el ? el.textContent : ''; };
+  const aoa = [
+    [],
+    ['', '직거래 (VAT 포함)', '직거래 (VAT 별도)', '', '', '도매 사이트 (VAT 포함)', '도매 사이트 (VAT 별도)'],
+    ['판매가', g('dt_sale_c1'), g('dt_sale_c2'), '', '판매가', g('ws_sale_c1'), g('ws_sale_c2')],
+    ['공급가 ', g('dt_cost_c1'), g('dt_cost_c2'), '', '공급가 ', g('ws_cost_c1'), g('ws_cost_c2')],
+    ['택배비 ', g('dt_ship_c1'), g('dt_ship_c2'), '', '택배비 ', g('ws_ship_c1'), g('ws_ship_c2')],
+    ['', '', '', '', '도매 수수료 (%)', g('ws_wholesale_c1'), g('ws_wholesale_c2')],
+    ['플랫폼 수수료율 (%)', g('dt_platform_c1'), g('dt_platform_c2'), '', '플랫폼 수수료율 (%)', g('ws_platform_c1'), g('ws_platform_c2')],
+    ['PG 수수료율 (%)', g('dt_pg_c1'), g('dt_pg_c2'), '', 'PG 수수료율 (%)', g('ws_pg_c1'), g('ws_pg_c2')],
+    ['예비비 (%)', g('dt_reserve_c1'), g('dt_reserve_c2'), '', '예비비 (%)', g('ws_reserve_c1'), g('ws_reserve_c2')],
+    [],
+    [],
+    ['현재 순이익(마진)', gv('dt_profit_c1'), gv('dt_profit_c2'), '', '현재 순이익(마진)', gv('ws_profit_c1'), gv('ws_profit_c2')],
+    [],
+    ['판매가 역산(마진 5%)', gv('dt_rev5_c1'), gv('dt_rev5_c2'), '', '판매가 역산(마진 5%)', gv('ws_rev5_c1'), gv('ws_rev5_c2')],
+    ['판매가 역산(마진 10%)', gv('dt_rev10_c1'), gv('dt_rev10_c2'), '', '판매가 역산(마진 10%)', gv('ws_rev10_c1'), gv('ws_rev10_c2')],
+    ['판매가 역산(마진 15%)', gv('dt_rev15_c1'), gv('dt_rev15_c2'), '', '판매가 역산(마진 15%)', gv('ws_rev15_c1'), gv('ws_rev15_c2')]
+  ];
+  const wsSimple = XLSX.utils.aoa_to_sheet(aoa);
+  wsSimple['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 3 }, { wch: 22 }, { wch: 23 }, { wch: 20 }];
+  const wbSimple = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbSimple, wsSimple, '마진_통합_계산기');
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wbSimple, `단순_마진계산기_${today}.xlsx`);
+}
+
 // ── Init ───────────────────────────────────────────────────
 updateTaxBadges();
 updateVatRowLabel();
 calc();
+calcSimple();
 </script>
 </body>
 </html>
