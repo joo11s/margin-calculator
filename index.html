@@ -755,7 +755,7 @@ table.ctable {
           <input type="number" id="ship-buyer" value="0" min="0" oninput="calc()">
         </div>
       </div>
-      <p class="ship-note">※ 무료배송 기준 이상이면 판매자 부담 0원, 미달이면 판매자 부담 배송비 적용 (소비자 부담 배송비는 마진 계산 제외)</p>
+      <p class="ship-note">※ 무료배송 기준 이상이면 판매자가 배송비 부담(고객 무료배송 제공), 미만이면 고객이 배송비 부담(판매자 비용 0원) — 소비자 부담 배송비는 마진 계산에서 제외</p>
     </div>
   </div>
   <!-- ── Section 3: 플랫폼별 마진 ── -->
@@ -1082,7 +1082,7 @@ function calc() {
       mgnMap[pid] = { margin: 0, price: 0 };
       return;
     }
-    const ship   = price >= freeMin ? 0 : shipSeller;
+    const ship   = price >= freeMin ? shipSeller : 0;
     const fee    = price * feeRate;
     const vat    = calcVatAmount(price, mfg);
     const total  = costBase + ship + fee + vat + ad;
@@ -1108,21 +1108,24 @@ function calc() {
     const targetR   = targetPct / 100;
     const ad        = num('ad-' + pid);
     let vatF = 0;
+    let vatFixed = 0; // 매입세액공제(공급가 기준 고정액, 판매가와 무관)
     if (taxType === 'tax') {
-      vatF = 1 / 11;
+      vatF = 1 / 11;       // 매출세액 비율(판매가 대비)
+      vatFixed = mfg / 11; // 매입세액공제
     } else if (taxType === 'simplified') {
       const rate = num('simplified-rate', 15) / 100;
       vatF = rate * 0.1;
     }
     const denom = 1 - feeRate - vatF - targetR;
     if (denom <= 0) { setText('rv-' + pid, '계산불가'); return; }
-    const spNoShip = (costBase + ad) / denom;
+    // 무료배송 기준 미만이면 배송비 부담 없음(고객 부담), 이상이면 판매자가 배송비 부담(무료배송 제공)
+    const spNoShip = (costBase - vatFixed + ad) / denom;
     let minPrice;
     if (spNoShip >= freeMin) {
-      minPrice = ceilTo(spNoShip, 100);
-    } else {
-      const spWithShip = (costBase + shipSeller + ad) / denom;
+      const spWithShip = (costBase - vatFixed + shipSeller + ad) / denom;
       minPrice = ceilTo(spWithShip, 100);
+    } else {
+      minPrice = ceilTo(spNoShip, 100);
     }
     setText('rv-' + pid, minPrice.toLocaleString('ko-KR') + '원');
   });
