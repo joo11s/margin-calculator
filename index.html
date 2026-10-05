@@ -493,6 +493,71 @@ table.ctable {
   padding: 6px 10px 0;
   font-style: italic;
 }
+/* Mobile-only label spans: hidden on PC */
+.tab-mobile { display: none; }
+/* Scroll hint for comparison tables: hidden on PC */
+.scroll-hint { display: none; }
+@media (max-width: 640px) {
+  /* A: Header buttons — nowrap, wrap to second line */
+  header { flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+  .header-left { flex: 1 1 100%; }
+  .header-left .sub { font-size: 10px; }
+  .header-right { width: 100%; justify-content: flex-end; }
+  .header-right .btn { white-space: nowrap; font-size: 12px; padding: 6px 10px; }
+  /* B: Tab labels — show short mobile version */
+  .tab-pc { display: none; }
+  .tab-mobile { display: inline; }
+  .tab-btn { white-space: nowrap; font-size: 13px; padding: 9px 14px; }
+  /* C: Comparison table sticky first column */
+  .scroll-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--text2);
+    padding: 8px 16px 2px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .ctable th:first-child,
+  .ctable td:first-child {
+    min-width: 96px;
+    max-width: 96px;
+    white-space: normal;
+    word-break: keep-all;
+    font-size: 11px;
+    padding: 7px 6px;
+    z-index: 2;
+    background: #1a1a2e;
+  }
+  .ctable th:first-child {
+    z-index: 3;
+    background: #1a1a2e;
+  }
+  .ctable th,
+  .ctable td {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+  .ctable td:not(:first-child) {
+    white-space: nowrap;
+    min-width: 80px;
+  }
+  .ctable .row-alt td:first-child {
+    background: #1a1a2e;
+    z-index: 2;
+  }
+  /* D: Simple calculator result rows — no clipping */
+  .excel-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .excel-table td.label-cell {
+    white-space: normal;
+    word-break: keep-all;
+    max-width: 110px;
+    font-size: 12px;
+  }
+  .excel-table .row-profit td:not(.label-cell),
+  .excel-table .row-rev td:not(.label-cell) {
+    white-space: nowrap;
+  }
+}
 </style>
 </head>
 <body>
@@ -507,8 +572,8 @@ table.ctable {
   </div>
 </header>
 <div class="tabs-nav">
-  <button class="tab-btn active" data-tab="simple" onclick="switchTab('simple')">🧮 간단 마진계산기</button>
-  <button class="tab-btn" data-tab="detailed" onclick="switchTab('detailed')">📊 상세 마진계산기</button>
+  <button class="tab-btn active" data-tab="simple" onclick="switchTab('simple')"><span class="tab-pc">🧮 간단 마진계산기</span><span class="tab-mobile">🧮 간단 계산</span></button>
+  <button class="tab-btn" data-tab="detailed" onclick="switchTab('detailed')"><span class="tab-pc">📊 상세 마진계산기</span><span class="tab-mobile">📊 상세 계산</span></button>
 </div>
 <main>
 <div id="panel-simple" class="tab-panel active">
@@ -767,6 +832,7 @@ table.ctable {
       <h2><span class="section-num">3</span> 플랫폼별 마진 계산</h2>
       <span class="badge">마진율: 🔴 &lt;10% &nbsp;🟡 10~20% &nbsp;🟢 &gt;20%</span>
     </div>
+    <div class="scroll-hint">← 좌우로 밀어서 플랫폼 비교</div>
     <div class="table-wrap">
       <table class="ctable" id="margin-table">
         <thead>
@@ -865,6 +931,7 @@ table.ctable {
         <span style="font-size:12px;font-weight:400;color:var(--text2);">— 목표 마진율 기준 최소 판매가 (100원 단위 올림)</span>
       </h2>
     </div>
+    <div class="scroll-hint">← 좌우로 밀어서 플랫폼 비교</div>
     <div class="table-wrap">
       <table class="ctable">
         <thead>
@@ -897,6 +964,7 @@ table.ctable {
     <div class="card-header">
       <h2><span class="section-num">5</span> 손익분기점 (BEP)</h2>
     </div>
+    <div class="scroll-hint">← 좌우로 밀어서 플랫폼 비교</div>
     <div class="table-wrap">
       <table class="ctable">
         <thead>
