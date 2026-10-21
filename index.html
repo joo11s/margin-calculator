@@ -7,11 +7,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  --bg: #0a0a16;
-  --card: #14142a;
-  --border: #2a2a4a;
-  --text: #e8e8f0;
-  --text2: #9494ad;
+  --bg: #141414;
+  --card: #232323;
+  --border: #3e3e3e;
+  --text: #ececec;
+  --text2: #a1a1a1;
   --accent: #f5e6c8;
   --accent-light: rgba(245,230,200,0.12);
   --red: #f87171;
@@ -155,7 +155,7 @@ main {
   border-radius: 8px;
   font-size: 14px;
   color: var(--text);
-  background: #14142a;
+  background: #232323;
   transition: border-color .15s, box-shadow .15s;
   -moz-appearance: textfield;
 }
@@ -174,7 +174,7 @@ main {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  background: #14142a;
+  background: #232323;
   cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
 }
@@ -252,14 +252,14 @@ table.ctable {
   font-weight: 600;
   color: var(--text2);
   font-size: 12px;
-  background: #1a1a2e;
+  background: #282828;
   position: sticky;
   left: 0;
   min-width: 130px;
   border-right: 1px solid var(--border);
 }
 .ctable th {
-  background: #1a1a2e;
+  background: #282828;
   font-size: 12px;
   font-weight: 700;
   color: var(--text);
@@ -267,8 +267,8 @@ table.ctable {
   padding: 12px 14px;
 }
 .ctable th:first-child { border-right: 1px solid var(--border); }
-.ctable tbody tr:hover td { background: #1a1a2e; }
-.ctable tbody tr:hover td:first-child { background: #20203a; }
+.ctable tbody tr:hover td { background: #282828; }
+.ctable tbody tr:hover td:first-child { background: #313131; }
 .ctable td input[type="number"] {
   width: 100px;
   padding: 6px 10px;
@@ -276,7 +276,7 @@ table.ctable {
   border-radius: 6px;
   font-size: 13px;
   text-align: right;
-  background: #14142a;
+  background: #232323;
   color: var(--text);
   -moz-appearance: textfield;
 }
@@ -287,10 +287,10 @@ table.ctable {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(245,230,200,.12);
 }
-.ctable .row-alt td { background: #1a1a2e; }
-.ctable .row-alt td:first-child { background: #1a1a2e; }
-.ctable .row-alt:hover td { background: #20203a; }
-.ctable .row-alt:hover td:first-child { background: #26264a; }
+.ctable .row-alt td { background: #282828; }
+.ctable .row-alt td:first-child { background: #282828; }
+.ctable .row-alt:hover td { background: #313131; }
+.ctable .row-alt:hover td:first-child { background: #3c3c3c; }
 .m-red { color: var(--red) !important; font-weight: 700; background: var(--red-bg) !important; }
 .m-amber { color: var(--amber) !important; font-weight: 700; background: var(--amber-bg) !important; }
 .m-green { color: var(--green) !important; font-weight: 700; background: var(--green-bg) !important; }
@@ -311,7 +311,7 @@ table.ctable {
   border: 1px solid var(--border);
   border-radius: 4px;
   text-align: right;
-  background: #14142a;
+  background: #232323;
   color: var(--text);
   -moz-appearance: textfield;
 }
@@ -357,7 +357,7 @@ table.ctable {
   margin-top: 10px;
   font-size: 12px;
   color: var(--text2);
-  background: #1a1a2e;
+  background: #282828;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
@@ -445,7 +445,7 @@ table.ctable {
   text-align: right;
 }
 .excel-table td.label-cell {
-  background: #1a1a2e;
+  background: #282828;
   color: var(--text);
   font-weight: 500;
   text-align: left;
@@ -526,11 +526,11 @@ table.ctable {
     font-size: 11px;
     padding: 7px 6px;
     z-index: 2;
-    background: #1a1a2e;
+    background: #282828;
   }
   .ctable th:first-child {
     z-index: 3;
-    background: #1a1a2e;
+    background: #282828;
   }
   .ctable th,
   .ctable td {
@@ -542,7 +542,7 @@ table.ctable {
     min-width: 80px;
   }
   .ctable .row-alt td:first-child {
-    background: #1a1a2e;
+    background: #282828;
     z-index: 2;
   }
   /* D: Simple calculator result rows — no clipping */
